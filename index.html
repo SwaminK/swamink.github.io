@@ -1,0 +1,455 @@
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  #game {
+    display: grid; grid-template-columns: 1fr 200px;
+    font-family: 'Nunito', sans-serif;
+    background: #1a0a2e; border-radius: 16px; overflow: hidden;
+    border: 1.5px solid #3d1f6e; color: #f0e6ff; position: relative;
+  }
+  #left {
+    display: flex; flex-direction: column; align-items: center;
+    padding: 28px 20px; background: linear-gradient(160deg,#1a0a2e 0%,#2d1155 100%);
+    border-right: 1px solid #3d1f6e; position: relative; overflow: hidden;
+  }
+  #left::before {
+    content:''; position:absolute; width:300px; height:300px; border-radius:50%;
+    background:radial-gradient(circle,rgba(120,60,220,0.15) 0%,transparent 70%);
+    top:50%; left:50%; transform:translate(-50%,-50%); pointer-events:none;
+  }
+  #cookie-count { font-family:'Fredoka One',cursive; font-size:28px; color:#f5c842; text-shadow:0 0 20px rgba(245,200,66,0.4); margin-bottom:4px; text-align:center; }
+  #cps { font-size:12px; color:#b8a0e0; margin-bottom:20px; }
+  #cookie-btn {
+    width:150px; height:150px; border-radius:50%;
+    background:radial-gradient(circle at 38% 35%,#f5d76e,#d4800a);
+    cursor:pointer; font-size:80px; display:flex; align-items:center; justify-content:center;
+    transition:transform 0.08s ease,box-shadow 0.08s ease;
+    box-shadow:0 6px 30px rgba(200,130,20,0.4),inset 0 -4px 10px rgba(100,50,0,0.3);
+    user-select:none; position:relative; z-index:1;
+    -webkit-tap-highlight-color:transparent; outline:none; border:none; padding:0;
+  }
+  #cookie-btn:active { transform:scale(0.92); }
+  #cookie-btn:hover { transform:scale(1.05); box-shadow:0 8px 40px rgba(200,130,20,0.6); }
+  .click-particle {
+    position:absolute; pointer-events:none; font-family:'Fredoka One',cursive;
+    font-size:18px; color:#f5c842; text-shadow:0 0 10px rgba(245,200,66,0.8);
+    animation:floatUp 1s ease-out forwards; z-index:10;
+  }
+  @keyframes floatUp { 0%{opacity:1;transform:translateY(0) scale(1)} 100%{opacity:0;transform:translateY(-80px) scale(0.5)} }
+  #upgrades-area { margin-top:22px; width:100%; }
+  #upgrades-area h3 { font-size:11px; text-transform:uppercase; letter-spacing:1.5px; color:#8060b0; margin-bottom:10px; text-align:center; }
+  .upgrade-btn {
+    width:100%; padding:8px 12px; margin-bottom:6px;
+    background:rgba(80,40,140,0.4); border:1px solid #5a3090; border-radius:10px;
+    color:#d4baff; font-family:'Nunito',sans-serif; font-size:12px; cursor:pointer;
+    display:flex; align-items:center; gap:8px; transition:background 0.15s,border-color 0.15s,opacity 0.15s; text-align:left;
+  }
+  .upgrade-btn:hover:not(:disabled) { background:rgba(110,60,190,0.5); border-color:#8060cc; }
+  .upgrade-btn:disabled { opacity:0.4; cursor:not-allowed; }
+  .upgrade-btn .u-icon { font-size:22px; flex-shrink:0; }
+  .upgrade-btn .u-name { font-weight:700; font-size:12px; color:#e0ccff; display:block; }
+  .upgrade-btn .u-cost { font-size:11px; color:#f5c842; }
+  #right { background:#120820; padding:16px 12px; display:flex; flex-direction:column; gap:6px; overflow-y:auto; max-height:600px; }
+  #right-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:4px; flex-shrink:0; }
+  #right-header h3 { font-size:11px; text-transform:uppercase; letter-spacing:1.5px; color:#5a3a8a; }
+  #tabs { display:flex; gap:4px; }
+  .tab-btn {
+    font-size:10px; background:rgba(80,40,140,0.5); border:1px solid #5a3090;
+    border-radius:6px; color:#c0a0e8; font-family:'Nunito',sans-serif;
+    cursor:pointer; padding:3px 7px; transition:background 0.15s; white-space:nowrap;
+  }
+  .tab-btn:hover { background:rgba(110,60,190,0.6); }
+  .tab-btn.active { background:rgba(110,60,190,0.7); border-color:#9060dd; color:#e0ccff; }
+  .building-btn {
+    width:100%; padding:7px 10px; background:rgba(40,15,70,0.8);
+    border:1px solid #2e1550; border-radius:8px; color:#c0a0e8;
+    font-family:'Nunito',sans-serif; font-size:11px; cursor:pointer;
+    display:flex; align-items:center; gap:6px;
+    transition:background 0.15s,border-color 0.15s; text-align:left;
+  }
+  .building-btn:hover:not([data-disabled="true"]) { background:rgba(70,30,120,0.7); border-color:#5a3090; }
+  .building-btn[data-disabled="true"] { opacity:0.35; cursor:not-allowed; }
+  .b-icon { font-size:20px; flex-shrink:0; }
+  .b-info { flex:1; min-width:0; }
+  .b-name { font-weight:700; font-size:11px; color:#d4b8f8; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .b-cps { font-size:10px; color:#7a5aaa; }
+  .b-cost { font-size:10px; color:#f5c842; white-space:nowrap; }
+  .b-owned { background:#3d1f6e; border-radius:4px; padding:1px 5px; font-size:10px; color:#c090ff; font-weight:700; flex-shrink:0; }
+  #milestones { margin-top:8px; font-size:10px; color:#5a3a8a; text-align:center; font-style:italic; }
+  #golden-cookie { position:absolute; font-size:36px; cursor:pointer; animation:spin 3s linear infinite; filter:drop-shadow(0 0 12px gold); z-index:20; display:none; }
+  @keyframes spin { 0%{transform:rotate(0deg) scale(1)} 50%{transform:rotate(180deg) scale(1.1)} 100%{transform:rotate(360deg) scale(1)} }
+  #boost-msg { font-size:11px; color:#f5c842; text-align:center; min-height:16px; margin-top:6px; }
+  .panel { display:none; flex-direction:column; gap:10px; }
+  .panel.active { display:flex; animation:fadeIn 0.2s ease; }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
+  .help-section { padding:10px; background:rgba(40,15,80,0.6); border:1px solid #2e1550; border-radius:8px; }
+  .help-section h4 { font-size:13px; font-weight:700; color:#c090ff; margin-bottom:4px; }
+  .help-section p { font-size:11px; color:#a080d0; line-height:1.6; }
+  .help-tip { font-size:10px; color:#f5c842; background:rgba(80,60,0,0.3); border:1px solid rgba(245,200,66,0.2); border-radius:6px; padding:6px 8px; line-height:1.5; }
+  .credits-avatar { width:72px; height:72px; border-radius:50%; background:radial-gradient(circle at 38% 35%,#f5d76e,#d4800a); display:flex; align-items:center; justify-content:center; font-size:36px; box-shadow:0 0 24px rgba(245,200,66,0.4); border:3px solid #f5c842; margin:0 auto; }
+  .credits-name { font-family:'Fredoka One',cursive; font-size:22px; color:#f5c842; text-shadow:0 0 16px rgba(245,200,66,0.4); text-align:center; }
+  .credits-tag { font-size:11px; color:#8060b0; text-align:center; }
+  .credits-desc { font-size:11px; color:#a080d0; line-height:1.7; text-align:center; }
+  .credits-divider { width:100%; height:1px; background:#2e1550; }
+  .yt-btn { display:flex; align-items:center; gap:8px; justify-content:center; background:#ff0000; border:none; border-radius:10px; color:#fff; font-family:'Nunito',sans-serif; font-weight:700; font-size:13px; padding:10px 18px; cursor:pointer; width:100%; transition:background 0.15s,transform 0.1s; text-decoration:none; }
+  .yt-btn:hover { background:#cc0000; transform:scale(1.03); }
+  .sub-nudge { font-size:10px; color:#7a5aaa; font-style:italic; text-align:center; }
+  .credits-footer { font-size:10px; color:#3d2560; text-align:center; }
+
+  /* Admin overlay */
+  #admin-overlay {
+    display:none; position:absolute; inset:0; z-index:100;
+    background:rgba(10,4,24,0.85); backdrop-filter:blur(4px);
+    align-items:center; justify-content:center;
+  }
+  #admin-overlay.open { display:flex; animation:fadeIn 0.18s ease; }
+  #admin-box {
+    background:#1e0d40; border:1.5px solid #7040cc; border-radius:16px;
+    padding:24px 22px; width:280px; display:flex; flex-direction:column; gap:14px;
+    box-shadow:0 0 40px rgba(120,60,220,0.4);
+  }
+  #admin-box h2 { font-family:'Fredoka One',cursive; font-size:20px; color:#c090ff; display:flex; align-items:center; gap:8px; }
+  #admin-box .admin-sub { font-size:11px; color:#6040a0; margin-top:-8px; }
+  .admin-field label { font-size:11px; color:#a080d0; display:block; margin-bottom:5px; }
+  .admin-field input[type=number] {
+    width:100%; padding:8px 10px; background:#120820; border:1px solid #5a3090;
+    border-radius:8px; color:#f0e6ff; font-family:'Nunito',sans-serif; font-size:13px;
+    outline:none;
+  }
+  .admin-field input[type=number]:focus { border-color:#9060dd; }
+  .admin-btns { display:flex; gap:8px; }
+  .admin-apply {
+    flex:1; padding:9px; background:#7040cc; border:none; border-radius:8px;
+    color:#fff; font-family:'Nunito',sans-serif; font-weight:700; font-size:13px;
+    cursor:pointer; transition:background 0.15s;
+  }
+  .admin-apply:hover { background:#8f58e8; }
+  .admin-close {
+    padding:9px 14px; background:rgba(80,40,140,0.4); border:1px solid #5a3090;
+    border-radius:8px; color:#c0a0e8; font-family:'Nunito',sans-serif; font-size:13px;
+    cursor:pointer; transition:background 0.15s;
+  }
+  .admin-close:hover { background:rgba(110,60,190,0.5); }
+  .admin-presets { display:flex; gap:6px; flex-wrap:wrap; }
+  .preset-btn {
+    font-size:10px; padding:4px 8px; background:rgba(60,20,110,0.6);
+    border:1px solid #3d1f6e; border-radius:6px; color:#c090ff;
+    font-family:'Nunito',sans-serif; cursor:pointer; transition:background 0.15s;
+  }
+  .preset-btn:hover { background:rgba(90,40,160,0.7); }
+  #admin-feedback { font-size:11px; color:#6dcc90; text-align:center; min-height:14px; }
+  .admin-hint { font-size:10px; color:#3d2560; text-align:center; }
+</style>
+
+<h2 class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)">Cookie Clicker made by SwaminK</h2>
+
+<div id="game">
+  <div id="left">
+    <div id="cookie-count">🍪 0</div>
+    <div id="cps">0 cookies/sec</div>
+    <button id="cookie-btn" aria-label="Click to bake a cookie">🍪</button>
+    <div id="golden-cookie" title="Golden cookie!">✨🍪✨</div>
+    <div id="boost-msg"></div>
+    <div id="upgrades-area"><h3>Upgrades</h3><div id="upgrade-list"></div></div>
+    <div id="milestones"></div>
+  </div>
+  <div id="right">
+    <div id="right-header">
+      <h3 id="panel-title">Buildings</h3>
+      <div id="tabs">
+        <button class="tab-btn" id="tab-help">❓</button>
+        <button class="tab-btn" id="tab-credits">👤</button>
+      </div>
+    </div>
+    <div id="buildings-panel" class="panel active">
+      <div id="building-list"></div>
+    </div>
+    <div id="help-panel" class="panel">
+      <div class="help-section">
+        <h4>🍪 The Cookie</h4>
+        <p>Click the big cookie on the left to earn cookies. Each click gives you 1 cookie to start — upgrades make each click more powerful.</p>
+      </div>
+      <div class="help-section">
+        <h4>🏭 Buildings</h4>
+        <p>Buildings earn cookies automatically every second. Buy more of the same building to stack production. Each purchase raises that building's cost by 15%.</p>
+        <p style="margin-top:6px;font-size:10px;color:#7a5aaa;">👆 Cursor · 👵 Grandma · 🌾 Farm · ⛏️ Mine · 🏭 Factory · 🏦 Bank · ⚗️ Lab · 🌀 Portal</p>
+      </div>
+      <div class="help-section">
+        <h4>⚡ Upgrades</h4>
+        <p>One-time purchases that permanently boost output. Buy early — they often double everything at once.</p>
+      </div>
+      <div class="help-section">
+        <h4>✨ Golden Cookie</h4>
+        <p>Appears randomly every ~45–75 seconds. Click it fast for a 5–10× boost lasting 15 seconds!</p>
+      </div>
+      <div class="help-section">
+        <h4>🏆 Milestones</h4>
+        <p>Earn titles as your all-time cookie count grows — from First Century to Cookie Singularity.</p>
+      </div>
+      <div class="help-tip">💡 Buy a few Cursors first, then save for a Grandma. Once you have buildings, focus on upgrades.</div>
+    </div>
+    <div id="credits-panel" class="panel">
+      <div class="credits-avatar">🍪</div>
+      <div class="credits-name">SwaminK</div>
+      <div class="credits-tag">YouTuber &amp; Cookie Engineer</div>
+      <div class="credits-divider"></div>
+      <div class="credits-desc">This game was made by <strong style="color:#e0ccff">SwaminK</strong> — a YouTuber cooking up great content just like these cookies. 🎮</div>
+      <div class="credits-desc" style="color:#f5c842;font-weight:700;font-size:12px;">👇 Go sub right now — you won't regret it!</div>
+      <a class="yt-btn" href="https://youtube.com/@SwaminK123" target="_blank" rel="noopener">▶ &nbsp;Subscribe on YouTube</a>
+      <div class="sub-nudge">@SwaminK123 · Hit that subscribe button! 🔔</div>
+      <div class="credits-divider"></div>
+      <div class="credits-footer">Built with 🍪 and way too much JavaScript</div>
+    </div>
+  </div>
+
+  <!-- Admin overlay -->
+  <div id="admin-overlay">
+    <div id="admin-box">
+      <h2>🛠️ Admin Panel</h2>
+      <div class="admin-sub">Ctrl + Shift + K to toggle</div>
+      <div class="admin-field">
+        <label>Set cookies to:</label>
+        <input type="number" id="admin-cookie-input" min="0" placeholder="Enter amount..." />
+      </div>
+      <div class="admin-field">
+        <label>Quick presets:</label>
+        <div class="admin-presets">
+          <button class="preset-btn" data-val="1000">1K</button>
+          <button class="preset-btn" data-val="1000000">1M</button>
+          <button class="preset-btn" data-val="1000000000">1B</button>
+          <button class="preset-btn" data-val="1000000000000">1T</button>
+          <button class="preset-btn" data-val="0">Reset</button>
+        </div>
+      </div>
+      <div id="admin-feedback"></div>
+      <div class="admin-btns">
+        <button class="admin-apply" id="admin-apply">Apply</button>
+        <button class="admin-close" id="admin-close">Close</button>
+      </div>
+      <div class="admin-hint">🤫 Shhh — secret panel</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const fmt = n => {
+  if (n < 1000) return Math.floor(n).toLocaleString();
+  if (n < 1e6) return (n/1000).toFixed(1)+'K';
+  if (n < 1e9) return (n/1e6).toFixed(2)+'M';
+  if (n < 1e12) return (n/1e9).toFixed(2)+'B';
+  return (n/1e12).toFixed(2)+'T';
+};
+
+let cookies = 0, totalEver = 0, cps = 0, clickPower = 1, boost = 1, boostEnd = 0;
+
+const buildings = [
+  { id:'cursor',  name:'Cursor',      icon:'👆', baseCost:15,        cpsEach:0.1,  owned:0 },
+  { id:'grandma', name:'Grandma',     icon:'👵', baseCost:100,       cpsEach:0.5,  owned:0 },
+  { id:'farm',    name:'Cookie Farm', icon:'🌾', baseCost:1100,      cpsEach:4,    owned:0 },
+  { id:'mine',    name:'Mine',        icon:'⛏️', baseCost:12000,     cpsEach:10,   owned:0 },
+  { id:'factory', name:'Factory',     icon:'🏭', baseCost:130000,    cpsEach:40,   owned:0 },
+  { id:'bank',    name:'Bank',        icon:'🏦', baseCost:1400000,   cpsEach:100,  owned:0 },
+  { id:'lab',     name:'Alchemy Lab', icon:'⚗️', baseCost:20000000,  cpsEach:400,  owned:0 },
+  { id:'portal',  name:'Portal',      icon:'🌀', baseCost:330000000, cpsEach:6666, owned:0 },
+];
+
+const upgrades = [
+  { id:'u1', name:'Better Fingers',   icon:'👆', desc:'2× click power', cost:100,     bought:false, effect(){ clickPower*=2; } },
+  { id:'u2', name:"Grandma's Recipe", icon:'📜', desc:'2× all CPS',     cost:500,     bought:false, effect(){ buildings.forEach(b=>b.cpsEach*=2); recalcCps(); } },
+  { id:'u3', name:'Golden Touch',     icon:'✨', desc:'3× click power', cost:5000,    bought:false, effect(){ clickPower*=3; } },
+  { id:'u4', name:'Cookie Storm',     icon:'🌪️', desc:'2× all CPS',    cost:50000,   bought:false, effect(){ buildings.forEach(b=>b.cpsEach*=2); recalcCps(); } },
+  { id:'u5', name:'Antimatter',       icon:'⚛️', desc:'5× all CPS',    cost:1000000, bought:false, effect(){ buildings.forEach(b=>b.cpsEach*=5); recalcCps(); } },
+];
+
+const milestones = [[100,'First Century 🎉'],[1000,'Cookie Hoarder 🏆'],[100000,'Cookie Baron 👑'],[1e7,'Cookie God ⚡'],[1e10,'Cookie Singularity 🌌']];
+let milestoneIdx = 0;
+let currentPanel = 'buildings';
+const panelTitles = { buildings:'Buildings', help:'How to play', credits:'About' };
+
+function showPanel(name) {
+  if (currentPanel === name) name = 'buildings';
+  currentPanel = name;
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById(name + '-panel').classList.add('active');
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  if (name !== 'buildings') document.getElementById('tab-' + name).classList.add('active');
+  document.getElementById('panel-title').textContent = panelTitles[name];
+}
+
+document.getElementById('tab-help').addEventListener('click', function() { showPanel('help'); });
+document.getElementById('tab-credits').addEventListener('click', function() { showPanel('credits'); });
+
+function buildingCost(b) { return Math.ceil(b.baseCost * Math.pow(1.15, b.owned)); }
+function recalcCps() { cps = buildings.reduce((s,b) => s + b.cpsEach * b.owned, 0); }
+
+function checkMilestone() {
+  while (milestoneIdx < milestones.length && totalEver >= milestones[milestoneIdx][0]) {
+    document.getElementById('milestones').textContent = milestones[milestoneIdx][1];
+    milestoneIdx++;
+  }
+}
+
+function updateBuildingStates() {
+  document.querySelectorAll('.building-btn').forEach(function(btn) {
+    const b = buildings[parseInt(btn.dataset.idx)];
+    const cost = buildingCost(b);
+    btn.dataset.disabled = cookies >= cost ? 'false' : 'true';
+    btn.querySelector('.b-cost').textContent = fmt(cost);
+    btn.querySelector('.b-owned').textContent = b.owned;
+  });
+}
+
+function updateUpgradeStates() {
+  document.querySelectorAll('.upgrade-btn').forEach(function(btn) {
+    btn.disabled = cookies < upgrades[parseInt(btn.dataset.idx)].cost;
+  });
+}
+
+function buildBuildings() {
+  const list = document.getElementById('building-list');
+  list.innerHTML = '';
+  buildings.forEach(function(b, idx) {
+    const cost = buildingCost(b);
+    const btn = document.createElement('button');
+    btn.className = 'building-btn';
+    btn.dataset.idx = idx;
+    btn.dataset.disabled = cookies >= cost ? 'false' : 'true';
+    btn.innerHTML = '<span class="b-icon">'+b.icon+'</span><div class="b-info"><span class="b-name">'+b.name+'</span><span class="b-cps">'+b.cpsEach+'/s each</span></div><span class="b-cost">'+fmt(cost)+'</span><span class="b-owned">'+b.owned+'</span>';
+    btn.addEventListener('click', function() {
+      const c = buildingCost(b);
+      if (cookies >= c) { cookies -= c; b.owned++; recalcCps(); updateBuildingStates(); updateUpgradeStates(); }
+    });
+    list.appendChild(btn);
+  });
+}
+
+function buildUpgrades() {
+  const list = document.getElementById('upgrade-list');
+  list.innerHTML = '';
+  upgrades.filter(function(u){ return !u.bought; }).forEach(function(u) {
+    const realIdx = upgrades.indexOf(u);
+    const btn = document.createElement('button');
+    btn.className = 'upgrade-btn';
+    btn.dataset.idx = realIdx;
+    btn.disabled = cookies < u.cost;
+    btn.innerHTML = '<span class="u-icon">'+u.icon+'</span><div class="u-info"><span class="u-name">'+u.name+'</span><span class="u-cost">🍪 '+fmt(u.cost)+'</span></div><span>'+u.desc+'</span>';
+    btn.addEventListener('click', function() {
+      if (cookies >= u.cost && !u.bought) { cookies -= u.cost; u.bought = true; u.effect(); buildUpgrades(); updateBuildingStates(); }
+    });
+    list.appendChild(btn);
+  });
+}
+
+function spawnParticle(x, y, amount) {
+  const el = document.createElement('div');
+  el.className = 'click-particle';
+  el.textContent = '+' + fmt(amount);
+  el.style.left = (x + (Math.random()*40-20)) + 'px';
+  el.style.top = y + 'px';
+  document.getElementById('left').appendChild(el);
+  setTimeout(function(){ el.remove(); }, 1000);
+}
+
+document.getElementById('cookie-btn').addEventListener('click', function(e) {
+  const rect = e.currentTarget.getBoundingClientRect();
+  const leftRect = document.getElementById('left').getBoundingClientRect();
+  const gain = clickPower * boost;
+  cookies += gain; totalEver += gain;
+  spawnParticle(rect.left - leftRect.left + rect.width/2 - 20, rect.top - leftRect.top - 30, gain);
+  checkMilestone(); updateBuildingStates(); updateUpgradeStates();
+});
+
+// Admin panel
+var adminOpen = false;
+var adminOverlay = document.getElementById('admin-overlay');
+var adminInput = document.getElementById('admin-cookie-input');
+var adminFeedback = document.getElementById('admin-feedback');
+
+function openAdmin() {
+  adminOpen = true;
+  adminInput.value = Math.floor(cookies);
+  adminFeedback.textContent = '';
+  adminOverlay.classList.add('open');
+  setTimeout(function(){ adminInput.focus(); adminInput.select(); }, 50);
+}
+
+function closeAdmin() {
+  adminOpen = false;
+  adminOverlay.classList.remove('open');
+}
+
+function applyAdmin() {
+  var val = parseFloat(adminInput.value);
+  if (isNaN(val) || val < 0) {
+    adminFeedback.style.color = '#e06060';
+    adminFeedback.textContent = '⚠️ Enter a valid number!';
+    return;
+  }
+  cookies = val;
+  if (val > totalEver) totalEver = val;
+  checkMilestone();
+  updateBuildingStates();
+  updateUpgradeStates();
+  adminFeedback.style.color = '#6dcc90';
+  adminFeedback.textContent = '✅ Set to ' + fmt(val) + ' cookies!';
+}
+
+document.getElementById('admin-apply').addEventListener('click', applyAdmin);
+document.getElementById('admin-close').addEventListener('click', closeAdmin);
+
+adminInput.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') applyAdmin();
+  if (e.key === 'Escape') closeAdmin();
+});
+
+document.querySelectorAll('.preset-btn').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    adminInput.value = btn.dataset.val;
+    applyAdmin();
+  });
+});
+
+adminOverlay.addEventListener('click', function(e) {
+  if (e.target === adminOverlay) closeAdmin();
+});
+
+document.addEventListener('keydown', function(e) {
+  if (e.ctrlKey && e.shiftKey && e.key === 'K') {
+    e.preventDefault();
+    if (adminOpen) closeAdmin(); else openAdmin();
+  }
+  if (e.key === 'Escape' && adminOpen) closeAdmin();
+});
+
+// Golden cookie
+var goldenTimer = 0, goldenVisible = false;
+var goldenEl = document.getElementById('golden-cookie');
+goldenEl.addEventListener('click', function() {
+  goldenEl.style.display = 'none'; goldenVisible = false;
+  boost = 5 + Math.floor(Math.random()*6); boostEnd = Date.now() + 15000;
+});
+
+var last = Date.now();
+function gameLoop() {
+  var now = Date.now(), dt = (now - last) / 1000; last = now;
+  if (boost > 1 && now > boostEnd) { boost = 1; document.getElementById('boost-msg').textContent = ''; }
+  else if (boost > 1) { document.getElementById('boost-msg').textContent = '⚡ '+boost+'× boost! '+Math.ceil((boostEnd-now)/1000)+'s'; }
+  if (cps > 0) { var g = cps * dt * boost; cookies += g; totalEver += g; checkMilestone(); }
+  document.getElementById('cookie-count').textContent = '🍪 ' + fmt(cookies);
+  document.getElementById('cps').textContent = fmt(cps * boost) + ' cookies/sec';
+  updateBuildingStates();
+  updateUpgradeStates();
+  goldenTimer += dt;
+  if (!goldenVisible && goldenTimer > 45 + Math.random()*30) {
+    goldenEl.style.left = (20 + Math.random()*130) + 'px';
+    goldenEl.style.top = (170 + Math.random()*130) + 'px';
+    goldenEl.style.display = 'block'; goldenVisible = true; goldenTimer = 0;
+    setTimeout(function(){ goldenEl.style.display = 'none'; goldenVisible = false; }, 10000);
+  }
+  requestAnimationFrame(gameLoop);
+}
+
+buildBuildings();
+buildUpgrades();
+requestAnimationFrame(gameLoop);
+</script>
